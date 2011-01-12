@@ -71,9 +71,9 @@ module NMM
     end
     
     def norm
-      mean = @points.inject(0.0) { |sum,v| sum + v[1] }
-      q = @points.inject(0.0) do |sum,v|
-        sum + ((v[1] - mean)**2)
+      q = 0
+      @points.combination(2) do |p|
+        q += ((p[0][1] - p[1][1]) ** 2.0)
       end
       return Math::sqrt(q / (@dimension))
     end
