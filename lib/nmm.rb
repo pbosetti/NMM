@@ -139,10 +139,11 @@ if __FILE__ == $0 then
   start_points.each { |p| opt << [p, f.call(p)] }
   
   until opt.check do
-    x_r = [opt.hint, f.call(opt.hint)]
-    puts "Reflecting at #{x_r.inspect}"
-    x_n = opt.step(x_r[1])
+    x_r = f.call(opt.hint)
+    puts "Reflecting at #{opt.hint}"
+    x_n = opt.step(x_r)
     opt << [x_n, f.call(x_n)]
-    puts "New point at #{opt.simplex.points[-1]}, norm #{opt.simplex.norm}"
+    values = [opt.simplex.points[-1][0].to_a, opt.simplex.points[-1][1],opt.simplex.norm].flatten
+    puts "New point at:\n [%9.3f,%9.3f] -> %9.5f ||%9.5f||" % values
   end
 end
