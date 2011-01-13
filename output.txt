@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+#  output
+#
+#  Created by Paolo Bosetti on 2011-01-13.
+#  Copyright (c) 2011 University of Trento. All rights reserved.
+#
+

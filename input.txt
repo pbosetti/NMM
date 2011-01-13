@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+#  input
+#
+#  Created by Paolo Bosetti on 2011-01-13.
+#  Copyright (c) 2011 University of Trento. All rights reserved.
+#
+
+prova 13 kjgdkj kjgaskjg a
+lkjg kagh asprova 2.7 kjgdkj kjgaskjg a 28.5
+kjsh khasl j klja lskh 
