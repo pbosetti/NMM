@@ -7,11 +7,13 @@
 
 require 'matrix'
 
-if RUBY_VERSION.split(".").join.to_i < 190
-  # Add method for division under Ruby 1.8.x
-  class Vector
+class Vector
+  if RUBY_VERSION.split(".").join.to_i < 190
+    # Add method for division under Ruby 1.8.x
     def /(other); self * (1.0 / other); end
   end
+  # More compact inspect version
+  def inspect; "V[#{self.to_a * ","}]"; end
 end
 
 
@@ -26,7 +28,8 @@ module NMM
     end
     
     def []=(p,v)
-      raise ArgumentError, "Vector needed" unless p.kind_of? Vector and p.size == @dimension - 1
+      raise ArgumentError, "Vector needed" unless p.kind_of? Vector 
+      raise ArgumentError, "Wrong Vector size #{@p.size}" unless p.size == @dimension - 1
       if @points.size <= @dimension - 1
         @points << [p, v]
       else
@@ -71,6 +74,7 @@ module NMM
     end
     
     def norm
+      return nil unless @points.size == @dimension
       q = 0
       @points.combination(2) do |p|
         q += ((p[0][1] - p[1][1]) ** 2.0)
@@ -80,7 +84,7 @@ module NMM
   end # class Simplex
 
   class Optimizer
-    attr_reader :simplex
+    attr_reader :simplex, :status
     
     def initialize(args = {})
       @cfg = {
@@ -91,59 +95,126 @@ module NMM
       }
       @cfg.merge! args
       @simplex = Simplex.new(@cfg[:dim])
+      @start_points = []
+      @status = :filling
+    end
+    
+    def start_points=(ary)
+      raise ArgumentError, "Need an Array" unless ary.kind_of? Array
+      raise ArgumentError, "Array size must be #{@cfg[:dim]}" unless ary.size == @cfg[:dim]
+      content = true
+      ary.each { |v|  content = false unless v.kind_of? Vector}
+      raise ArgumentError, "Array elements must be Vectors" unless content
+      @start_points = ary
     end
     
     def <<(point)
-      raise ArgumentError unless point[0].kind_of? Vector and point[1].kind_of? Numeric
+      raise ArgumentError, "Need an Array" unless point.size == 2
+      raise ArgumentError, "point[0] must be Vector" unless point[0].kind_of? Vector 
+      raise ArgumentError, "point[1] must be Numeric" unless point[1].kind_of? Numeric
       @simplex[point[0]] = point[1]
     end
-    
-    def hint
-      @simplex[:r]
+            
+    def loop(ary = nil)
+      raise ArgumentError, "Block needed" unless block_given?
+      fx = nil
+      until converged do
+        next_point = step(fx)
+        unless next_point[1] then
+          puts "Reflecting at #{next_point}"
+          fx = yield(next_point[0])
+        else
+          next_point[1] = yield(next_point[0]) if next_point[1] == 0
+          self << next_point
+          fx = nil
+          log
+        end
+        ary << [next_point, @status] if ary.kind_of? Array
+      end
     end
     
-    def step(vr)
-      x_new = @simplex[:r]
+    def log
+      values = [@simplex.points[-1][0].to_a, @simplex.points[-1][1],(@simplex.norm || 0)].flatten
+      puts "New point at:\n [%9.3f,%9.3f] -> %9.5f ||%9.5f||" % values
+    end
+    
+    def converged
+      n = @simplex.norm
+      if n then
+        @simplex.norm < @cfg[:tol]
+      else
+        false
+      end
+    end
+    
+    private
+    def step(vr = nil)
+      # Filling starting Simplex
+      if @start_points.size > 0 then
+        @status = :filling
+        return [@start_points.shift, 0] 
+      end
+      
+      # Reflecting Simplex
+      unless vr
+        @status = :reflecting
+        return [@simplex[:r], nil]
+      end
+      
+      # Checking Expansion/Contraction
+      x_new = [@simplex[:r], vr]
       if vr < @simplex[:l][1] then
         # Expansion
-        x_new = @simplex[:c] * (1 + @cfg[:exp_f]) - @simplex[:h][0]
+        @status = :expansion
+        x_new = [@simplex[:c] * (1 + @cfg[:exp_f]) - @simplex[:h][0], 0]
       else
         if vr >= @simplex[:h][1] then
           # Contraction
-          x_new = @simplex[:c] * (1 - @cfg[:cnt_f]) + @simplex[:h][0] * @cfg[:cnt_f]
+          @status = :contraction1
+          x_new = [@simplex[:c] * (1 - @cfg[:cnt_f]) + @simplex[:h][0] * @cfg[:cnt_f], 0]
         else
           if @simplex[:g][1] < vr and vr < @simplex[:h][1] then
             # Contraction
-            x_new = @simplex[:c] * (1 + @cfg[:cnt_f]) - @simplex[:h][0]
+            @status = :contraction2
+            x_new = [@simplex[:c] * (1 + @cfg[:cnt_f]) - @simplex[:h][0], 0]
           end
         end
       end
       return x_new
     end
     
-    def check
-      return @simplex.norm < @cfg[:tol]
-    end
-    
   end # class Optimizer
 end # module NMM
 
+
+
+
 if __FILE__ == $0 then
+  # Test function
   f = lambda { |p| p[0]**2 + p[1]**2  }
+  
+  # Instantiate the optimizer, with tolerance and dimension (it is the dimension
+  # of the simplex, so number of parameters + 1 !!!)
   opt = NMM::Optimizer.new( :dim => 3, :tol => 1E-5)
-  start_points = [
+  
+  # Define the starting points, i.e. the first guess simplex
+  opt.start_points = [
     Vector[10,37],
     Vector[7,2],
-    Vector[-51,32] 
+    Vector[51,32] 
   ]
-  start_points.each { |p| opt << [p, f.call(p)] }
   
-  until opt.check do
-    x_r = f.call(opt.hint)
-    puts "Reflecting at #{opt.hint}"
-    x_n = opt.step(x_r)
-    opt << [x_n, f.call(x_n)]
-    values = [opt.simplex.points[-1][0].to_a, opt.simplex.points[-1][1],opt.simplex.norm].flatten
-    puts "New point at:\n [%9.3f,%9.3f] -> %9.5f ||%9.5f||" % values
-  end
+  # Start the loop, passing a block that evaluates the function at the point
+  # represented by the block parameter p
+  # For different logging, just override the Optimizer#log method
+  opt.loop {|p| f.call(p)}
+  
+  # Final simplex configuration is available at the end.
+  p opt.simplex
+  
+  # In order to save track of the solution, pass an existing array to the 
+  # Optimizer#loop method:
+  # ary = []
+  # opt.loop(ary) {|p| f.call(p)}
+  # p ary
 end
