@@ -5,8 +5,20 @@
 #  Copyright (c) 2011 University of Trento. All rights reserved.
 #
 
+# Class for dealing with Deform input/output files.
+# @author Paolo Bosetti
 class Scanner
   attr_reader :line_count, :error_count
+  
+  # The +Scanner+ gets initialized with the following defaults:
+  #     :tag_open  => '<$',
+  #     :tag_close => '$>',
+  #     :in_ext    => 'tpl',
+  #     :out_ext   => 'txt',
+  #     :input_file => "input"
+  # If no +args+ is specified, these are the defaults. Otherwise, the keys that 
+  # are passed are merged with those defaults.
+  # @param [Hash] args a +Hash+ of initialization values
   def initialize(args = {})
     @cfg = {
       :tag_open  => '<$',
@@ -18,6 +30,13 @@ class Scanner
     @cfg.merge! args
   end
   
+  # Writes a new input file, on the basis of the template file and of the passed
+  # +Hash+ of values.
+  #
+  # Names of input and output files are determined on the basis of values specified
+  # in the +@cfg+ variable.
+  # @param [Hash, <Symbol,Numeric>] vars the hash of values; keys must be present
+  #   in the template file.
   def write_input(vars)
     raise ArgumentError, "Expecting an Hash" unless vars.kind_of? Hash
     @error_count = @line_count = 0

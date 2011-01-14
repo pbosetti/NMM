@@ -16,17 +16,34 @@ class Vector
   def inspect; "V[#{self.to_a * ","}]"; end
 end
 
-
+# @author Paolo Bosetti
+# @todo Perhaps a new class Point could be added, made of a +Vector+ and 
+#   of the +Numeric+ value of the function at +Vector+. This could make the 
+#   code more clear and simplify the argument checking.
 module NMM
 
+# Class that implements a general n-dimensional simplex, defined as a set of 
+# Vector instances.
+# Note: the dimension attribute represents the dimension of the simplex, 
+# i.e. the number of points it is made of.
+# @author Paolo Bosetti
   class Simplex
     attr_reader :dimension, :points
+    # @param [Integer] dim the dimension of the simplex (its number of points)
+    # @raise [ArghumentError] if dim is not an Integer
     def initialize(dim)
+      raise ArgumentError, "Need an integer" unless dim.kind_of? Integer
       @dimension = dim
       @points = []
       @ready = false
     end
     
+    # Adds a new point to the Simplex as a couple of Vector and value.
+    # If the simplex is not filled, it only adds the new point; otherwise
+    # it replaces the last point with the new one.
+    # @param [Vector] p point coordinates as a Vector instance of dimension @dimension - 1
+    # @param [Numeric] v function value at p
+    # @raise [ArgumentError] when v is not a Vector of size @dimension - 1
     def []=(p,v)
       raise ArgumentError, "Vector needed" unless p.kind_of? Vector 
       raise ArgumentError, "Wrong Vector size #{@p.size}" unless p.size == @dimension - 1
@@ -38,6 +55,13 @@ module NMM
       @ready = false
     end
     
+    # Perform the analysis of the Simplex. It actually sorts the point for 
+    # function values in ascending order, then computes the centroid of the 
+    # hyperface opposed to the worst point, then reflects the worst point
+    # about the centroid.
+    # Computation only gets performed if the @points array has changed since
+    # the last call. You do not have to call this method since it gets 
+    # automatically invoked when a new point is added to the Simplex.
     def analyse
       return if @ready
       @points = @points.sort {|a,b| a[1] <=> b[1] }
@@ -47,8 +71,15 @@ module NMM
       @ready = true
     end
     
+    # Gets the point of the Simplex where the function assumes it lowest (:l),
+    # highest (:j), second highest (:g) value. Also gets the centroid of best 
+    # hyperface (:c) and the reflected point (:r).
+    # @param [Symbol] k the key of the desired point
+    # @return [Array <Vector, Numeric>] a couple of a Vector and a Numeric value
+    # @raise [ArgumentError] when k is not a Symbol
     def [](k)
       analyse unless @ready
+      raise ArgumentError, "Expecting a Symbol" unless k.kind_of? Symbol
       case k
       when :l
         @points[0]
@@ -65,6 +96,8 @@ module NMM
       end
     end
     
+    # Overridden #inspect method.
+    # @return [String] human readable description
     def inspect
       result = ""
       [:l, :h, :g, :c, :r].each do |k|
@@ -73,6 +106,9 @@ module NMM
       result
     end
     
+    # Computes the norm as a quadratic sum of all the combinations of 
+    # point values.
+    # @return [Float] the norm.
     def norm
       return nil unless @points.size == @dimension
       q = 0
@@ -83,9 +119,19 @@ module NMM
     end
   end # class Simplex
 
+# Class that implements a general n-dimensional Nelder-Meade Method (NMM).
+# @author Paolo Bosetti
   class Optimizer
     attr_reader :simplex, :status
     
+    # The +Optimizer+ gets initialized with the following defaults:
+    #     :dim   => 2,
+    #     :exp_f => 1.5, 
+    #     :cnt_f => 0.5,
+    #     :tol   => 0.001
+    # If no +args+ is specified, these are the defaults. Otherwise, the keys that 
+    # are passed are merged with those defaults.
+    # @param [Hash] args a +Hash+ of initialization values
     def initialize(args = {})
       @cfg = {
         :dim   => 2,
@@ -99,6 +145,9 @@ module NMM
       @status = :filling
     end
     
+    # Sets the starting points of the +Simplex+.
+    # @param [Array] ary an +Array+ of +Vector+s
+    # @raise [ArgumentError] unless +ary+ is an +Array+ of +@cfg[:dim]+ +Vector+s
     def start_points=(ary)
       raise ArgumentError, "Need an Array" unless ary.kind_of? Array
       raise ArgumentError, "Array size must be #{@cfg[:dim]}" unless ary.size == @cfg[:dim]
@@ -108,13 +157,29 @@ module NMM
       @start_points = ary
     end
     
+    # Adds a new point to the +Simplex+.
+    # @param [Array <Vector,Numeric>] point a new point with its value.
+    # @raise [ArgumentError] is point is not of the expected type
+    # @return [Array <Vector,Numeric>] the new point
     def <<(point)
       raise ArgumentError, "Need an Array" unless point.size == 2
       raise ArgumentError, "point[0] must be Vector" unless point[0].kind_of? Vector 
       raise ArgumentError, "point[1] must be Numeric" unless point[1].kind_of? Numeric
       @simplex[point[0]] = point[1]
     end
-            
+    
+    # Starts the minimization loop. It expects the block containing the 
+    # function evaluation.
+    # @example
+    #   f = lambda {|point| point[0]**2 + point[1]**2}
+    #   opt = NMM::Optimizer.new( :dim => 3, :tol => 1E-5)
+    #   opt.start_points = [Vector[10,37],Vector[7,2],Vector[51,32]]
+    #   opt.loop {|point| f.call(p)}
+    # @param [Array] ary if given, it gets filled with the optimization path
+    # @yield [point] the block must return the evaluation of the function in +point+
+    # @yieldparam [Vector] point the point which the function has to be evaluated at
+    # @yieldreturn [Float] the evaluation
+    # @raise [ArgumentError] unless a block is given
     def loop(ary = nil)
       raise ArgumentError, "Block needed" unless block_given?
       fx = nil
@@ -133,11 +198,16 @@ module NMM
       end
     end
     
+    # This method prints out the track of the optimization.
+    # @note You should override this method if you want to have a different 
+    #   printout of minimization path.
     def log
       values = [@simplex.points[-1][0].to_a, @simplex.points[-1][1],(@simplex.norm || 0)].flatten
       puts "New point at:\n [%9.3f,%9.3f] -> %9.5f ||%9.5f||" % values
     end
     
+    # Returns if the loop has converged, i.e. if the norm is less than +@cfg[:tol]+
+    # @return [Bool] true if the loop has converged
     def converged?
       n = @simplex.norm
       if n then
