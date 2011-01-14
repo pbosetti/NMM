@@ -5,6 +5,6 @@
 #  Copyright (c) 2011 University of Trento. All rights reserved.
 #
 
-prova <$var1$> kjgdkj kjgaskjg a
+prova <$ modulus $> kjgdkj kjgaskjg a
 lkjg kagh asprova <$    var2 $> kjgdkj kjgaskjg a <$var3$>
 kjsh khasl j klja lskh 

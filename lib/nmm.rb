@@ -118,7 +118,7 @@ module NMM
     def loop(ary = nil)
       raise ArgumentError, "Block needed" unless block_given?
       fx = nil
-      until converged do
+      until converged? do
         next_point = step(fx)
         unless next_point[1] then
           puts "Reflecting at #{next_point}"
@@ -138,7 +138,7 @@ module NMM
       puts "New point at:\n [%9.3f,%9.3f] -> %9.5f ||%9.5f||" % values
     end
     
-    def converged
+    def converged?
       n = @simplex.norm
       if n then
         @simplex.norm < @cfg[:tol]
@@ -216,5 +216,6 @@ if __FILE__ == $0 then
   # Optimizer#loop method:
   # ary = []
   # opt.loop(ary) {|p| f.call(p)}
+  # puts "***"
   # p ary
 end

@@ -11,7 +11,7 @@ require "./lib/scanner"
 sc = Scanner.new :input_file => "input"
 point = Vector[13,2.7,28.5]
 
-sc.write_input {:var1 => point[0], :var2 => point[1], :var3 => point[2]}
+sc.write_input :modulus => point[0], :var2 => point[1], :var3 => point[2]
 puts "Written #{sc.line_count} lines with #{sc.error_count} errors"
 
 
@@ -26,5 +26,5 @@ opt.start_points = [
 opt.loop do |p| 
   sc.write_input :var1 => point[0], :var2 => point[1], :var3 => point[2]
   system "deform #{sc.cfg[:input_file]}.txt"
-  sc.read_output # MUST return a Vector!
+  sc.read_output # Numeric!
 end

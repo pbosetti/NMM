@@ -39,4 +39,27 @@ class Scanner
     end
   end
   
+  def read_output
+    f = force()
+    load_nodes()
+    ct = chip_thickness()
+    cc = chip_curvature()
+    [f, ct, cc].inject {|memo, v| memo + v**2.0 }
+  end
+  
+  def force
+    
+  end
+  
+  def load_nodes
+    
+  end
+  
+  def chip_thickness
+    
+  end
+  
+  def chip_curvature
+    
+  end
 end
