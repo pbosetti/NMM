@@ -261,7 +261,7 @@ end # module NMM
 
 if __FILE__ == $0 then
   # Test function
-  f = lambda { |p| p[0]**2 + p[1]**2  }
+  f = lambda { |p| p[0] ** 2 + p[1] ** 2 }
   
   # Instantiate the optimizer, with tolerance and dimension (it is the dimension
   # of the simplex, so number of parameters + 1 !!!)
@@ -269,9 +269,9 @@ if __FILE__ == $0 then
   
   # Define the starting points, i.e. the first guess simplex
   opt.start_points = [
-    Vector[10,37],
-    Vector[7,2],
-    Vector[51,32] 
+    Vector[10,10],
+    Vector[50,60],
+    Vector[80,-2] 
   ]
   
   # Start the loop, passing a block that evaluates the function at the point
